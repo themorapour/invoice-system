@@ -551,7 +551,6 @@ export default function InvoicePage() {
           
         </CardContent>
       </Card>
-      
 
 
       <style jsx global>{`
