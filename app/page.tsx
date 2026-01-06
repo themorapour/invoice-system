@@ -109,8 +109,28 @@ const invoiceSchema = z.object({
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("fa-IR").format(amount);
+// تبدیل ارقام لاتین به فارسی
+const toPersianDigits = (s: string) => s.replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d)]);
+
+// تبدیل ارقام فارسی به لاتین (برای محاسبات)
+const toLatinDigits = (s: string) => s.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+
+// فرمت‌دهی نهایی: تبدیل به فارسی + جداکننده سه‌رقم
+const formatPersianNumber = (num: number): string => {
+    if (num === 0) return '۰';
+    const formatted = new Intl.NumberFormat('fa-IR', {
+        useGrouping: true,
+        minimumFractionDigits: 0,
+    }).format(num);
+    return formatted;
+};
+
+const formatCurrency = (amount: number): string => {
+    // تضمین می‌کند که ارقام فارسی و جداکننده سه‌رقم اعمال شود
+    return new Intl.NumberFormat("fa-IR", {
+        useGrouping: true,
+        minimumFractionDigits: 0,
+    }).format(amount);
 };
 
 export default function InvoicePage() {
@@ -167,23 +187,57 @@ export default function InvoicePage() {
         name: "terms",
     });
 
-    // Watch values
+// ---------------------------------------------------------
+    // 1. دریافت همه مقادیر فرم (Watch Values) - بدون تکرار
+    // ---------------------------------------------------------
     const items = useWatch({ control, name: "items" }) || [];
     const selectedBank = useWatch({ control, name: "selectedBank" });
     const terms = useWatch({ control, name: "terms" });
+    const validUntil = useWatch({ control, name: "validUntil" }); // تاریخ اعتبار
 
-    // Watch tax & discount
+    // تنظیمات تخفیف
     const discountEnabled = useWatch({ control, name: "discountEnabled" });
     const discountRate = useWatch({ control, name: "discountRate" }) || 0;
+
+    // تنظیمات مالیات
     const taxEnabled = useWatch({ control, name: "taxEnabled" });
     const taxRate = useWatch({ control, name: "taxRate" }) || 0;
 
-    // --- محاسبات جدید ---
-    const subTotal = items.reduce((acc, item) => acc + (item.unitPrice || 0) * (item.quantity || 0), 0);
-    const discountAmount = discountEnabled ? Math.round(subTotal * (discountRate / 100)) : 0;
-    const totalAfterDiscount = subTotal - discountAmount;
-    const taxAmount = taxEnabled ? Math.round(totalAfterDiscount * (taxRate / 100)) : 0;
-    const totalAmount = totalAfterDiscount + taxAmount;
+    // ---------------------------------------------------------
+    // 2. انجام محاسبات ریاضی (Calculations)
+    // ---------------------------------------------------------
+    // جمع کل اقلام
+    const subTotal = items.reduce((acc, item) => {
+        return acc + ((item.unitPrice || 0) * (item.quantity || 0));
+    }, 0);
+
+    // محاسبه مبلغ تخفیف
+    const discountAmount = discountEnabled ? Math.round((subTotal * discountRate) / 100) : 0;
+
+    // مبلغ پس از تخفیف (برای محاسبه مالیات)
+    const amountAfterDiscount = subTotal - discountAmount;
+
+    // محاسبه مبلغ مالیات
+    const taxAmount = taxEnabled ? Math.round((amountAfterDiscount * taxRate) / 100) : 0;
+
+    // مبلغ نهایی قابل پرداخت
+    const totalAmount = amountAfterDiscount + taxAmount;
+
+    // ---------------------------------------------------------
+    // 3. منطق‌های نمایش در چاپ (Print Logic) - جدید
+    // ---------------------------------------------------------
+    
+    // شرط ۱: (خودکار در JSX اعمال می‌شود با !validUntil)
+
+    // شرط ۲: آیا ردیف تخفیف نمایش داده شود؟ (باید فعال باشد و مبلغ داشته باشد)
+    const showDiscountRow = discountEnabled && discountAmount > 0;
+
+    // شرط ۲: آیا ردیف مالیات نمایش داده شود؟ (باید فعال باشد و مبلغ داشته باشد)
+    const showTaxRow = taxEnabled && taxAmount > 0;
+
+    // شرط ۳: آیا ردیف "جمع کل اقلام" نمایش داده شود؟
+    // اگر نه تخفیف داریم و نه مالیات، جمع کل اقلام با مبلغ نهایی یکی است، پس حذف می‌شود.
+    const showSubTotalRow = showDiscountRow || showTaxRow;
 
     // 🔑 اصلاح نهایی تابع پرینت
     const handlePrint = useReactToPrint({
@@ -261,7 +315,7 @@ export default function InvoicePage() {
 
                     <CardHeader className="pb-4 bg-white">
                         
-                        <div className="flex flex-col justify-center items-center pt-2">
+                        <div className="flex flex-col justify-center items-center pt-6">
                             <CardTitle className="text-[16px] font-bold mb-2 ">پیش فاکتور فروش</CardTitle>
                         </div>
 
@@ -291,7 +345,7 @@ export default function InvoicePage() {
                                         className="h-8 w-20 md:text-xs text-center bg-gray-50 border-gray-200 print:border-none print:bg-transparent print:p-0 print:text-right print:w-auto"
                                     />
                                 </div>
-                                <div className="flex items-center gap-1.5">
+                                <div className={`flex items-center gap-1.5 ${!validUntil ? "print:hidden" : ""}`}>
                                     <span className="text-xs w-13 font-bold text-right text-gray-700 font-normal">اعتبار تا:</span>
                                     <Input
                                         {...register("validUntil")}
@@ -303,14 +357,14 @@ export default function InvoicePage() {
                         </div>
                     </CardHeader>
 
-                    <CardContent className="p-4 -mt-10">
+                    <CardContent className="p-4 -mt-9">
                         <div className="min-h-[300px]">
                             <Table className="border overflow-hidden table-auto whitespace-pre-wrap w-full">
                                 <TableHeader className="bg-white">
                                     <TableRow className="bg-white">
                                         <TableHead className="w-[35px] text-center text-black font-bold border-l border-black">ردیف</TableHead>
                                         <TableHead className="text-right w-[35%] text-black font-bold border-l border-black">شرح کالا</TableHead>
-                                        <TableHead className="text-right text-black border-l border-black">مدل</TableHead>
+                                        <TableHead className="text-right text-black border-l border-black">مدل/ظرفیت</TableHead>
                                         <TableHead className="text-center w-[50px] text-black font-bold border-l border-black">تعداد/متر</TableHead>
                                         <TableHead className="text-center w-[110px] text-black font-bold border-l border-black">فی (ریال)</TableHead>
                                         <TableHead className="text-center w-[120px] text-black font-bold">قیمت کل (ریال)</TableHead>
@@ -343,18 +397,45 @@ export default function InvoicePage() {
                                                 </TableCell>
 
                                                 <TableCell className="border-l whitespace-pre-wrap">
+                                                    {/* 💡 تغییر: type="number" به type="text" تبدیل شد */}
                                                     <Input
-                                                        type="number"
-                                                        {...register(`items.${index}.quantity`, { valueAsNumber: true })}
+                                                        type="text"
+                                                        // حذف register مستقیم
+                                                        // 🚨 تغییرات اینجا اعمال می‌شود
+                                                        value={toPersianDigits(String(items[index]?.quantity || 1))}
+                                                        onChange={(e) => {
+                                                            const rawValue = e.target.value.replace(/,/g, '');
+                                                            const latinValue = toLatinDigits(rawValue);
+                                                            const numericValue = parseInt(latinValue.replace(/[^0-9]/g, '') || '1', 10);
+                                                            
+                                                            // ذخیره مقدار عددی (لاتین) برای محاسبات در React Hook Form
+                                                            setValue(`items.${index}.quantity`, numericValue, { shouldValidate: true });
+                                                        }}
+                                                        placeholder="۱"
                                                         className="text-center border-0 bg-transparent shadow-none focus-visible:ring-0 h-auto"
+                                                        style={{ direction: 'rtl' }}
                                                     />
                                                 </TableCell>
 
                                                 <TableCell className="border-l whitespace-pre-wrap">
+                                                    {/* 💡 تغییر: type="number" به type="text" تبدیل شد */}
                                                     <Input
-                                                        type="number"
-                                                        {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
-                                                        className="text-center border-0 bg-transparent shadow-none focus-visible:ring-0 ltr h-auto"
+                                                        type="text"
+                                                        // حذف register مستقیم
+                                                        // 🚨 تغییرات اینجا اعمال می‌شود
+                                                        value={formatPersianNumber(items[index]?.unitPrice || 0)}
+                                                        onChange={(e) => {
+                                                            const rawValue = e.target.value.replace(/,/g, ''); // حذف جداکننده‌ها
+                                                            const latinValue = toLatinDigits(rawValue);      // تبدیل ارقام فارسی به لاتین
+                                                            const numericValue = parseInt(latinValue.replace(/[^0-9]/g, '') || '0', 10);
+                                                            
+                                                            // ذخیره مقدار عددی (لاتین) برای محاسبات در React Hook Form
+                                                            setValue(`items.${index}.unitPrice`, numericValue, { shouldValidate: true });
+                                                        }}
+                                                        placeholder="۰"
+                                                        // 👈 تغییر: حذف کلاس ltr برای نمایش RTL
+                                                        className="text-center border-0 bg-transparent shadow-none focus-visible:ring-0 h-auto" 
+                                                        style={{ direction: 'rtl' }}
                                                     />
                                                 </TableCell>
 
@@ -390,72 +471,70 @@ export default function InvoicePage() {
                             </Button>
 
                             <div className="space-y-3 mt-3">
-                                <div className="flex justify-between text-sm">
+                                <div className={`flex justify-between text-sm ${!showSubTotalRow ? "print:hidden" : ""}`}>
                                     <span className="text-gray-600">جمع کل اقلام:</span>
                                     <span className="font-medium">{formatCurrency(subTotal)} ریال</span>
                                 </div>
 
                                 {/* تخفیف: تغییر به درصد با چک‌باکس */}
-                                <div className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            id="discountCheck"
-                                            className="print:hidden"
-                                            checked={discountEnabled}
-                                            onCheckedChange={(c) => setValue("discountEnabled", !!c)}
-                                        />
-                                        <Label htmlFor="discountCheck" className="text-gray-600 cursor-pointer">
-                                            تخفیف
-                                            {discountEnabled && (
-                                                <span className="mr-1 text-xs print:hidden">
+                                <div className={`flex justify-between items-center text-sm ${!showDiscountRow ? "print:hidden" : ""}`}>
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="discountCheck"
+                                                className="print:hidden"
+                                                checked={discountEnabled}
+                                                onCheckedChange={(c) => setValue("discountEnabled", !!c)}
+                                            />
+                                            <Label htmlFor="discountCheck" className="text-gray-600 cursor-pointer">
+                                                تخفیف
+                                                {/* نمایش input درصد فقط در حالت ویرایش */}
+                                                <span className={`mr-1 text-xs ${!discountEnabled ? "hidden" : "inline"} print:hidden`}>
                                                     (
                                                     <input
                                                         type="number"
-                                                        className="w-8 border-b bg-transparent text-center focus:outline-none print:hidden"
+                                                        className="w-8 border-b bg-transparent text-center focus:outline-none"
                                                         {...register("discountRate", { valueAsNumber: true })}
                                                     />
-                                                    )
-                                                </span>
-                                            )}:
-                                        </Label>
-                                    </div>
-                                    {discountEnabled && (
-                                        <span className="text-red-600">
+                                                    %)
+                                                </span>:
+                                            </Label>
+                                        </div>
+                                        {/* نمایش مبلغ تخفیف */}
+                                        <span className={`text-red-600 ${!discountEnabled ? "hidden" : "block"}`}>
                                             {formatCurrency(discountAmount)} -
                                         </span>
-                                    )}
-                                </div>
+                                    </div>
 
                                 {/* مالیات: تغییر به درصد دستی با چک‌باکس */}
-                                <div className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            id="taxCheck"
-                                            className="print:hidden"
-                                            checked={taxEnabled}
-                                            onCheckedChange={(c) => setValue("taxEnabled", !!c)}
-                                        />
-                                        <Label htmlFor="taxCheck" className="text-gray-600 cursor-pointer">
-                                            مالیات
-                                            {taxEnabled && (
-                                                <span className="mr-1 text-xs print:hidden">
+                                <div className={`flex justify-between items-center text-sm ${!showTaxRow ? "print:hidden" : ""}`}>
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="taxCheck"
+                                                className="print:hidden"
+                                                checked={taxEnabled}
+                                                onCheckedChange={(c) => setValue("taxEnabled", !!c)}
+                                            />
+                                            <Label htmlFor="taxCheck" className="text-gray-600 cursor-pointer">
+                                                مالیات
+                                                {/* نمایش input درصد فقط در حالت ویرایش */}
+                                                <span className={`mr-1 text-xs ${!taxEnabled ? "hidden" : "inline"} print:hidden`}>
                                                     (
                                                     <input
                                                         type="number"
                                                         className="w-8 bg-transparent text-center focus:outline-none"
                                                         {...register("taxRate", { valueAsNumber: true })}
                                                     />
-                                                    )
-                                                </span>
-                                            )}:
-                                        </Label>
+                                                    %)
+                                                </span>:
+                                            </Label>
+                                        </div>
+                                        {/* نمایش مبلغ مالیات */}
+                                        <span className={`font-medium ${!taxEnabled ? "hidden" : "block"}`}>
+                                            {formatCurrency(taxAmount)} +
+                                        </span>
                                     </div>
-                                    {taxEnabled && (
-                                        <span className="font-medium">{formatCurrency(taxAmount)} +</span>
-                                    )}
-                                </div>
 
-                                <div className="my-4"></div>
+                                <div className="my-4 border-t print:border-none"></div>
 
                                 <div className="flex flex-col gap-1 p-2 border border-1 border-gray-200 bg-gray-100 rounded-[10px] ">
                                     <div className="flex justify-between items-center">
@@ -525,7 +604,7 @@ export default function InvoicePage() {
                                             </div>
                                             <div className="flex items-center space-x-2 space-x-reverse">
                                                 <RadioGroupItem value="refah" id="r3" />
-                                                <Label htmlFor="r3">بانک رفاه</Label>
+                                                <Label htmlFor="r3">بانک سامان</Label>
                                             </div>
                                         </RadioGroup>
                                     </div>
@@ -535,17 +614,17 @@ export default function InvoicePage() {
                                             <p className="font-bold">شماره حساب: شرکت البرز برج - بانک ملت</p>
                                             <div className="flex gap-4 mt-1 flex-wrap">
                                                 <span>کارت: <span className="font-mono font-bold tracking-wider">6104338800950608</span></span>
-                                                <span>شبا: <span className="font-mono">IR 130120000000009197647629</span></span>
+                                                <span>شبا: <span className="font-mono">IR 1301-2000-0000-0091-9764-7629</span></span>
                                             </div>
                                         </div>
                                     )}
 
                                     {selectedBank === 'refah' && (
                                         <div className="bg-gray-100 p-4 rounded-[15px] border border-gray-200 text-sm text-slate-700 print:bg-transparent print:border-none print:p-0">
-                                            <p className="font-bold">شماره حساب: بنیامین سجادی - بانک رفاه</p>
+                                            <p className="font-bold">شماره حساب: بنیامین سجادی - بانک سامان </p>
                                             <div className="flex gap-4 mt-1 flex-wrap">
-                                                <span>کارت: <span className="font-mono font-bold tracking-wider">5894631161108360</span></span>
-                                                <span>شبا: <span className="font-mono">IR 420130100000000321344765</span></span>
+                                                <span>کارت: <span className="font-mono font-bold tracking-wider">6219861923784549</span></span>
+                                                <span>شبا: <span className="font-mono">IR 6805-6061-1828-0053-6219-3601</span></span>
                                             </div>
                                         </div>
                                     )}
@@ -562,7 +641,7 @@ export default function InvoicePage() {
                     </CardContent>
 
                     {/* Footer ثابت */}
-                    <div className="print-footer">
+                    <div className="print-footer scale-[85%]">
                     <img src="/footer.svg" className="mx-auto" />
                     </div>
 
