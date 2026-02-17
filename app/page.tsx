@@ -607,11 +607,11 @@ export default function InvoicePage() {
                                                 <Label htmlFor="r2">بانک صادرات</Label>
                                             </div>                                            
                                             <div className="flex items-center space-x-2 space-x-reverse">
-                                                <RadioGroupItem value="mellat2" id="r5" />
+                                                <RadioGroupItem value="mellat2" id="r4" />
                                                 <Label htmlFor="r3">بانک ملت سجادی</Label>
                                             </div>
                                             <div className="flex items-center space-x-2 space-x-reverse">
-                                                <RadioGroupItem value="melli" id="r6" />
+                                                <RadioGroupItem value="melli" id="r5" />
                                                 <Label htmlFor="r3">بانک ملی سجادی</Label>
                                             </div>                                                                                                                                  
                                         </RadioGroup>
