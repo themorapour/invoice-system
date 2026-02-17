@@ -103,7 +103,7 @@ const invoiceSchema = z.object({
             enabled: z.boolean(),
         })
     ),
-    selectedBank: z.enum(["none", "mellat", "refah"]).default("none"),
+    selectedBank: z.enum(["none", "mellat", "saman", "mellat2", "melli"]).default("none"),
     customNotes: z.string().optional(),
 });
 
@@ -591,7 +591,7 @@ export default function InvoicePage() {
                                     <div className="print:hidden mb-2">
                                         <RadioGroup
                                             defaultValue="none"
-                                            onValueChange={(val: "none" | "mellat" | "refah") => setValue("selectedBank", val)}
+                                            onValueChange={(val: "none" | "mellat" | "saman" | "mellat2" | "melli") => setValue("selectedBank", val)}
                                             className="flex gap-4 -mt-6 mb-3 items-end justify-end"
                                         >
                                             <div className="flex items-center space-x-2 space-x-reverse">
@@ -603,9 +603,17 @@ export default function InvoicePage() {
                                                 <Label htmlFor="r2">بانک ملت</Label>
                                             </div>
                                             <div className="flex items-center space-x-2 space-x-reverse">
-                                                <RadioGroupItem value="refah" id="r3" />
+                                                <RadioGroupItem value="saman" id="r3" />
                                                 <Label htmlFor="r3">بانک سامان</Label>
                                             </div>
+                                            <div className="flex items-center space-x-2 space-x-reverse">
+                                                <RadioGroupItem value="mellat2" id="r4" />
+                                                <Label htmlFor="r3">بانک ملت</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2 space-x-reverse">
+                                                <RadioGroupItem value="melli" id="r5" />
+                                                <Label htmlFor="r3">بانک ملی</Label>
+                                            </div>                                                                                                                                  
                                         </RadioGroup>
                                     </div>
 
@@ -619,7 +627,7 @@ export default function InvoicePage() {
                                         </div>
                                     )}
 
-                                    {selectedBank === 'refah' && (
+                                    {selectedBank === 'saman' && (
                                         <div className="bg-gray-100 p-4 rounded-[15px] border border-gray-200 text-sm text-slate-700 print:bg-transparent print:border-none print:p-0">
                                             <p className="font-bold">شماره حساب: بنیامین سجادی - بانک سامان </p>
                                             <div className="flex gap-4 mt-1 flex-wrap">
@@ -628,6 +636,28 @@ export default function InvoicePage() {
                                             </div>
                                         </div>
                                     )}
+
+
+                                    {selectedBank === 'mellat2' && (
+                                        <div className="bg-gray-100 p-4 rounded-[15px] border border-gray-200 text-sm text-slate-700 print:bg-transparent print:border-none print:p-0">
+                                            <p className="font-bold">شماره حساب: بنیامین سجادی - بانک ملت </p>
+                                            <div className="flex gap-4 mt-1 flex-wrap">
+                                                <span>کارت: <span className="font-mono font-bold tracking-wider">6104338919472361</span></span>
+                                                <span>شبا: <span className="font-mono">IR 3701-2002-0000-0095-4711-7606</span></span>
+                                            </div>
+                                        </div>
+                                    )}
+
+
+                                    {selectedBank === 'melli' && (
+                                        <div className="bg-gray-100 p-4 rounded-[15px] border border-gray-200 text-sm text-slate-700 print:bg-transparent print:border-none print:p-0">
+                                            <p className="font-bold">شماره حساب: بنیامین سجادی - بانک ملی </p>
+                                            <div className="flex gap-4 mt-1 flex-wrap">
+                                                <span>کارت: <span className="font-mono font-bold tracking-wider">6362141814534831</span></span>
+                                                <span>شبا: <span className="font-mono">IR 8206-2000-0000-1021-4803-9000</span></span>
+                                            </div>
+                                        </div>
+                                    )}                             
 
                                     {(selectedBank !== 'none') && (
                                         <p className="mt-3 text-xs text-gray-600 border-t pt-1 border-dashed border-gray-400">
