@@ -103,7 +103,7 @@ const invoiceSchema = z.object({
             enabled: z.boolean(),
         })
     ),
-    selectedBank: z.enum(["none", "mellat", "saman", "mellat2", "melli"]).default("none"),
+    selectedBank: z.enum(["none", "mellat", "saderat", "mellat2", "melli"]).default("none"),
     customNotes: z.string().optional(),
 });
 
@@ -591,7 +591,7 @@ export default function InvoicePage() {
                                     <div className="print:hidden mb-2">
                                         <RadioGroup
                                             defaultValue="none"
-                                            onValueChange={(val: "none" | "mellat" | "saman" | "mellat2" | "melli") => setValue("selectedBank", val)}
+                                            onValueChange={(val: "none" | "mellat" | "saderat" | "mellat2" | "melli") => setValue("selectedBank", val)}
                                             className="flex gap-4 -mt-6 mb-3 items-end justify-end"
                                         >
                                             <div className="flex items-center space-x-2 space-x-reverse">
@@ -603,16 +603,16 @@ export default function InvoicePage() {
                                                 <Label htmlFor="r2">بانک ملت</Label>
                                             </div>
                                             <div className="flex items-center space-x-2 space-x-reverse">
-                                                <RadioGroupItem value="saman" id="r3" />
-                                                <Label htmlFor="r3">بانک سامان</Label>
+                                                <RadioGroupItem value="saderat" id="r3" />
+                                                <Label htmlFor="r2">بانک صادرات</Label>
+                                            </div>                                            
+                                            <div className="flex items-center space-x-2 space-x-reverse">
+                                                <RadioGroupItem value="mellat2" id="r5" />
+                                                <Label htmlFor="r3">بانک ملت سجادی</Label>
                                             </div>
                                             <div className="flex items-center space-x-2 space-x-reverse">
-                                                <RadioGroupItem value="mellat2" id="r4" />
-                                                <Label htmlFor="r3">بانک ملت</Label>
-                                            </div>
-                                            <div className="flex items-center space-x-2 space-x-reverse">
-                                                <RadioGroupItem value="melli" id="r5" />
-                                                <Label htmlFor="r3">بانک ملی</Label>
+                                                <RadioGroupItem value="melli" id="r6" />
+                                                <Label htmlFor="r3">بانک ملی سجادی</Label>
                                             </div>                                                                                                                                  
                                         </RadioGroup>
                                     </div>
@@ -627,12 +627,12 @@ export default function InvoicePage() {
                                         </div>
                                     )}
 
-                                    {selectedBank === 'saman' && (
+
+                                    {selectedBank === 'saderat' && (
                                         <div className="bg-gray-100 p-4 rounded-[15px] border border-gray-200 text-sm text-slate-700 print:bg-transparent print:border-none print:p-0">
-                                            <p className="font-bold">شماره حساب: بنیامین سجادی - بانک سامان </p>
+                                            <p className="font-bold">شماره حساب: شرکت البرز برج - بانک صادرات</p>
                                             <div className="flex gap-4 mt-1 flex-wrap">
-                                                <span>کارت: <span className="font-mono font-bold tracking-wider">6219861923784549</span></span>
-                                                <span>شبا: <span className="font-mono">IR 6805-6061-1828-0053-6219-3601</span></span>
+                                                <span>شبا: <span className="font-mono">IR 7101-9000-0000-1201-1742-0006</span></span>
                                             </div>
                                         </div>
                                     )}
