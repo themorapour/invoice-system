@@ -604,15 +604,15 @@ export default function InvoicePage() {
                                             </div>
                                             <div className="flex items-center space-x-2 space-x-reverse">
                                                 <RadioGroupItem value="saderat" id="r3" />
-                                                <Label htmlFor="r2">بانک صادرات</Label>
+                                                <Label htmlFor="r3">بانک صادرات</Label>
                                             </div>                                            
                                             <div className="flex items-center space-x-2 space-x-reverse">
                                                 <RadioGroupItem value="mellat2" id="r4" />
-                                                <Label htmlFor="r3">بانک ملت سجادی</Label>
+                                                <Label htmlFor="r4">بانک ملت سجادی</Label>
                                             </div>
                                             <div className="flex items-center space-x-2 space-x-reverse">
                                                 <RadioGroupItem value="melli" id="r5" />
-                                                <Label htmlFor="r3">بانک ملی سجادی</Label>
+                                                <Label htmlFor="r5">بانک ملی سجادی</Label>
                                             </div>                                                                                                                                  
                                         </RadioGroup>
                                     </div>
